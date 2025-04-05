@@ -7,28 +7,19 @@ import { ChevronLeft, ChevronRight } from "lucide-react"
 
 interface DashboardCalendarProps {
   className?: string
+  // Consider adding a prop for real event data later, e.g.:
+  // events?: { date: Date; title: string }[]; 
 }
 
 export function DashboardCalendar({ className }: DashboardCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date())
 
   const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate()
-
-  const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay()
+  const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay() // 0 = Sunday, 1 = Monday, ...
 
   const monthNames = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
   ]
 
   const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
@@ -41,36 +32,46 @@ export function DashboardCalendar({ className }: DashboardCalendarProps) {
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))
   }
 
-  // Mock events data
-  const events = [
-    { date: 5, title: "Research Paper Due" },
-    { date: 12, title: "Group Meeting" },
-    { date: 15, title: "Midterm Exam" },
-    { date: 22, title: "Project Presentation" },
-  ]
+  // Removed mock events data here
 
   const renderCalendarDays = () => {
     const days = []
     const today = new Date()
-    const isCurrentMonth =
-      today.getMonth() === currentDate.getMonth() && today.getFullYear() === currentDate.getFullYear()
+    const isCurrentMonthView =
+      currentDate.getMonth() === today.getMonth() &&
+      currentDate.getFullYear() === today.getFullYear()
 
     // Add empty cells for days before the first day of the month
+    // Adjusting for firstDayOfMonth being 0 (Sunday) to 6 (Saturday)
     for (let i = 0; i < firstDayOfMonth; i++) {
-      days.push(<div key={`empty-${i}`} className="h-10 text-center text-zinc-600"></div>)
+      days.push(<div key={`empty-${i}`} className="h-10 text-center"></div>)
     }
 
     // Add cells for each day of the month
     for (let day = 1; day <= daysInMonth; day++) {
-      const isToday = isCurrentMonth && today.getDate() === day
-      const hasEvent = events.some((event) => event.date === day)
+      const isToday = isCurrentMonthView && today.getDate() === day
+      
+      // Placeholder for checking real events if they were passed as props
+      // const hasEvent = events?.some(event => /* logic to check if event date matches day, currentDate.getMonth(), currentDate.getFullYear() */);
+      const hasEvent = false; // Default to false since mock data is removed
 
       days.push(
-        <div key={`day-${day}`} className={`h-10 text-center relative ${isToday ? "bg-zinc-800 rounded-full" : ""}`}>
-          <span className={`inline-flex items-center justify-center w-8 h-8 ${isToday ? "font-bold" : ""}`}>{day}</span>
-          {hasEvent && (
-            <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-blue-500 rounded-full"></div>
-          )}
+        <div
+          key={`day-${day}`}
+          className={`h-10 text-center relative flex items-center justify-center`}
+        >
+          <span
+            className={`inline-flex items-center justify-center w-8 h-8 rounded-full ${
+              isToday ? "bg-zinc-800 text-white font-bold" : ""
+            } ${hasEvent ? "border border-blue-500" : ""}`} // Example: border if event exists
+          >
+            {day}
+          </span>
+          {/* Removed event indicator dot based on mock data */}
+          {/* If using real data, you might add an indicator back here based on `hasEvent` */}
+          {/* {hasEvent && (
+             <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-blue-500 rounded-full"></div>
+           )} */}
         </div>,
       )
     }
@@ -107,19 +108,25 @@ export function DashboardCalendar({ className }: DashboardCalendarProps) {
           {renderCalendarDays()}
         </div>
 
-        <div className="mt-4 space-y-2">
-          <h4 className="text-sm font-medium">Upcoming Events</h4>
-          {events.map((event, index) => (
-            <div key={index} className="flex items-center gap-2 text-sm">
-              <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-              <span className="font-medium">{event.date}</span>
-              <span className="text-zinc-400">-</span>
-              <span>{event.title}</span>
-            </div>
-          ))}
-        </div>
+        {/* Removed the "Upcoming Events" section that relied on mock data */}
+        {/* Consider adding this back when you have real event data:
+          <div className="mt-4 space-y-2">
+            <h4 className="text-sm font-medium">Upcoming Events</h4>
+            {events?.filter(event => // filter logic for events in the current view or future )
+                   .map((event, index) => (
+              <div key={index} className="flex items-center gap-2 text-sm">
+                 <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                 <span className="font-medium">{ // Format event.date properly }</span>
+                 <span className="text-zinc-400">-</span>
+                 <span>{event.title}</span>
+              </div>
+            ))}
+            {(!events || events.filter(/* filter logic */).length === 0) && (
+              <p className="text-sm text-zinc-500">No upcoming events.</p>
+            )}
+          </div> 
+        */}
       </CardContent>
     </Card>
   )
 }
-
