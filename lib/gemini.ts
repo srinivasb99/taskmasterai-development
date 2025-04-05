@@ -6,7 +6,7 @@ import { collection, query, where, getDocs, doc, getDoc, updateDoc, orderBy, lim
 const genAI = new GoogleGenerativeAI("AIzaSyAfWn25V7MGf1OmtlWyGRNbpczsIYe-XxQ")
 
 // Get the generative model
-const model = genAI.getGenerativeModel({ model: "gemini-pro" })
+const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" })
 
 // Function to generate a response from Gemini
 export async function generateGeminiResponse(prompt: string, history: Array<{ role: string; content: string }> = []) {
