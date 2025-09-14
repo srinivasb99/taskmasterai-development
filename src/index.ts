@@ -101,14 +101,20 @@ const PRO_EMAILS = ["srinibaj10@gmail.com"];
 // ---------- CORS helper (for HTTP endpoints) ----------
 function setCors(req: any, res: any) {
   const origin = req.headers.origin;
-  const ALLOWED = ["https://www.linklearn.ai", "https://linklearn.ai", "http://localhost:5173"];
-  if (ALLOWED.includes(origin)) {
+  const ALLOWED = ["https://www.linklearn.ai", "https://linklearn.ai", "http://localhost:5173", "http://localhost:3000"];
+  
+  // Always allow localhost origins for development
+  if (origin && (origin.includes('localhost') || ALLOWED.includes(origin))) {
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Vary", "Origin");
+  } else if (!origin) {
+    // For direct requests without origin (like from Postman)
+    res.setHeader("Access-Control-Allow-Origin", "*");
   }
+  
   res.setHeader("Access-Control-Allow-Credentials", "true");
-  res.setHeader("Access-Control-Allow-Methods", "POST,OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("Access-Control-Allow-Methods", "POST,OPTIONS,GET");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
 }
 
 // ---------- Server-side Rate Limiting ----------
@@ -554,7 +560,7 @@ async function runLinkLearnProxyCore(
 // ------------------- FIXED LINKLEARN PROXY ENDPOINTS -------------------
 
 // Callable version (use with Firebase `httpsCallable` — zero CORS issues)
-export const linkLearnProxy = onCall(async (request) => {
+export const linkLearnProxy = onCall({ region: "us-central1" }, async (request) => {
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "Authentication is required.");
   }
