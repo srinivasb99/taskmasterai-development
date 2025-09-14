@@ -56,12 +56,12 @@ const googleClientId = defineString("GOOGLE_OAUTH_CLIENT_ID");
 const googleClientSecret = defineString("GOOGLE_OAUTH_CLIENT_SECRET");
 const youtubeApiKey = defineString("YOUTUBE_API_KEY");
 
-// --- REVISED AND ADDED SECRETS FOR TIERED TASKMASTER API KEYS ---
-const taskMasterApiKeyPaid = defineString("GEMINI_API_KEY_PAID"); // For Pro/Premium users
-const taskMasterApiKeyFree = defineString("GEMINI_API_KEY_FREE"); // For Basic users
+// --- REVISED AND ADDED SECRETS FOR TIERED LINKLEARN API KEYS ---
+const linkLearnApiKeyPaid = defineString("GEMINI_API_KEY_PAID"); // For Pro/Premium users
+const linkLearnApiKeyFree = defineString("GEMINI_API_KEY_FREE"); // For Basic users
 
-// --- TASKMASTER LIVE API KEY ---
-// const taskMasterLiveApiKey = defineString("GEMINI_LIVE_API_KEY"); // For Live API (requires standard API key)
+// --- LINKLEARN LIVE API KEY ---
+// const linkLearnLiveApiKey = defineString("GEMINI_LIVE_API_KEY"); // For Live API (requires standard API key)
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -85,6 +85,7 @@ const PREMIUM_EMAILS = [
   "gautham.paddu@outlook.com", 
   "Isha.kandhaluram@gmail.com",
   "learner@example.com",
+  "learner@gmail.com",
   "draco77654@gmail.com",
   "rithikrt1@gmail.com",
   "Mithun.kutuva@gmail.com",
@@ -92,14 +93,15 @@ const PREMIUM_EMAILS = [
   "shankartkraj@gmail.com",
   "akaash.chirravuri@gmail.com",
   "rebba.harsha@gmail.com",
-  "rikhilmajji32@gmail.com"
+  "rikhilmajji32@gmail.com",
+  "srinibaj10@gmail.com"
 ];
 const PRO_EMAILS = ["srinibaj10@gmail.com"];
 
 // ---------- CORS helper (for HTTP endpoints) ----------
 function setCors(req: any, res: any) {
   const origin = req.headers.origin;
-  const ALLOWED = ["https://www.taskmaster.one", "https://taskmaster.one", "http://localhost:5173"];
+  const ALLOWED = ["https://www.linklearn.ai", "https://linklearn.ai", "http://localhost:5173"];
   if (ALLOWED.includes(origin)) {
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Vary", "Origin");
@@ -287,10 +289,10 @@ async function incrementMonthlyUsage(uid: string, limitType: keyof typeof MONTHL
 }
 
 
-// ---------- Shared core for TaskMaster proxy (used by callable and HTTP) ----------
+// ---------- Shared core for LinkLearn proxy (used by callable and HTTP) ----------
 type UserTier = "basic" | "pro" | "premium";
 
-async function runTaskMasterProxyCore(
+async function runLinkLearnProxyCore(
   data: any,
   uid: string,
   email?: string | null
@@ -400,7 +402,7 @@ async function runTaskMasterProxyCore(
     );
   }
 
-  const key = (userTier === "pro" || userTier === "premium") ? taskMasterApiKeyPaid.value() : taskMasterApiKeyFree.value();
+  const key = (userTier === "pro" || userTier === "premium") ? linkLearnApiKeyPaid.value() : linkLearnApiKeyFree.value();
   if (!key) {
     throw new HttpsError("internal", "Server configuration error: API key is missing.");
   }
@@ -455,7 +457,7 @@ async function runTaskMasterProxyCore(
   // Track usage patterns for monitoring
   trackModelUsage(targetModel, uid);
   
-  const taskMasterApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${key}`;
+  const linkLearnApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${key}`;
 
   // Enable thinking ONLY for Pro model (not Flash or Flash-Lite)
   const enhancedGenerationConfig = useThinkHarder && targetModel.includes('2.5-pro')
@@ -475,13 +477,13 @@ async function runTaskMasterProxyCore(
     systemInstruction,
   };
 
-  const response = await fetch(taskMasterApiUrl, {
+  const response = await fetch(linkLearnApiUrl, {
     method: "POST",
     headers: { 
       "Content-Type": "application/json",
       "Connection": "keep-alive", // Optimize connection reuse
       "Cache-Control": "no-cache", // Ensure fresh responses
-      "User-Agent": `TaskMaster-Backend/1.0 (uid:${uid.substring(0,8)})` // Custom UA for tracking
+      "User-Agent": `LinkLearn-Backend/1.0 (uid:${uid.substring(0,8)})` // Custom UA for tracking
     },
     body: JSON.stringify(apiRequestBody),
   });
@@ -549,18 +551,18 @@ async function runTaskMasterProxyCore(
   return enhancedResponse;
 }
 
-// ------------------- FIXED TASKMASTER PROXY ENDPOINTS -------------------
+// ------------------- FIXED LINKLEARN PROXY ENDPOINTS -------------------
 
 // Callable version (use with Firebase `httpsCallable` — zero CORS issues)
-export const taskMasterProxy = onCall(async (request) => {
+export const linkLearnProxy = onCall(async (request) => {
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "Authentication is required.");
   }
-  return runTaskMasterProxyCore(request.data, request.auth.uid, request.auth.token.email);
+  return runLinkLearnProxyCore(request.data, request.auth.uid, request.auth.token.email);
 });
 
 // HTTP version (use with fetch + Bearer ID token) — includes full CORS & preflight
-export const taskMasterProxyHttp = onRequest({ region: "us-central1" }, async (req, res) => {
+export const linkLearnProxyHttp = onRequest({ region: "us-central1" }, async (req, res) => {
   setCors(req, res);
   if (req.method === "OPTIONS") {
     res.status(204).end();
@@ -581,12 +583,12 @@ export const taskMasterProxyHttp = onRequest({ region: "us-central1" }, async (r
     }
 
     const decoded = await admin.auth().verifyIdToken(idToken);
-    const out = await runTaskMasterProxyCore(req.body, decoded.uid, decoded.email || null);
+    const out = await runLinkLearnProxyCore(req.body, decoded.uid, decoded.email || null);
 
     setCors(req, res);
     res.status(200).json(out);
   } catch (e: any) {
-    console.error("taskMasterProxyHttp error:", e);
+    console.error("linkLearnProxyHttp error:", e);
     setCors(req, res);
     const code = e?.code === "unauthenticated" ? 401 : 500;
     res.status(code).json({ error: e?.code || "internal", message: e?.message || "Internal error" });
@@ -619,12 +621,20 @@ export const getGoogleAuthUrl = onCall(async (request) => {
   }
 
   const allowedRedirectUris = [
+    // Firebase Auth handlers (required for Firebase Auth)
+    "https://linklearn-ai.firebaseapp.com/__/auth/handler",
+    "https://linklearn.ai/__/auth/handler", 
+    "https://www.linklearn.ai/__/auth/handler",
+    // Custom app endpoints
     "http://localhost:5173/settings",
-    "https://www.taskmaster.one/settings",
+    "https://www.linklearn.ai/settings",
+    "https://linklearn.ai/settings",
     "http://localhost:5173/login",
-    "https://www.taskmaster.one/login",
+    "https://www.linklearn.ai/login",
+    "https://linklearn.ai/login",
     "http://localhost:5173/onboarding",
-    "https://www.taskmaster.one/onboarding",
+    "https://www.linklearn.ai/onboarding",
+    "https://linklearn.ai/onboarding",
   ];
   if (!allowedRedirectUris.some((uri) => redirectUri.startsWith(uri))) {
     throw new HttpsError("invalid-argument", `The provided redirectUri is not authorized: ${redirectUri}`);
@@ -636,14 +646,23 @@ export const getGoogleAuthUrl = onCall(async (request) => {
     redirectUri
   );
 
+  // Generate secure random state for CSRF protection (as per Google's recommendation)
+  const crypto = require('crypto');
+  const stateValue = crypto.randomBytes(32).toString('hex');
+  
   const url = oAuth2Client.generateAuthUrl({
     access_type: "offline",
-    prompt: "consent",
+    prompt: "consent", 
     scope: GOOGLE_SCOPES,
-    state: JSON.stringify({ redirectUri }),
+    state: stateValue,
+    include_granted_scopes: true, // Enable incremental authorization
   });
 
-  return { url };
+  return { 
+    url,
+    state: stateValue,
+    redirectUri // Return these for the client to store
+  };
 });
 
 // FINAL CORRECTED VERSION of googleOAuthCallback
@@ -652,23 +671,36 @@ export const googleOAuthCallback = onCall(async (request) => {
     throw new HttpsError("unauthenticated", "Authentication required.");
   }
 
-  const { code, state } = request.data;
+  const { code, state, redirectUri, expectedState } = request.data;
   const uid = request.auth.uid;
 
-  if (!code || !state) {
-    throw new HttpsError("invalid-argument", "The 'code' and 'state' must be provided.");
+  if (!code || !state || !redirectUri || !expectedState) {
+    throw new HttpsError("invalid-argument", "The 'code', 'state', 'redirectUri', and 'expectedState' must be provided.");
   }
 
-  let parsedState;
-  try {
-    parsedState = JSON.parse(state);
-  } catch (e) {
-    throw new HttpsError("invalid-argument", "Invalid state format.");
+  // Validate state parameter for CSRF protection (as per Google's recommendation)
+  if (state !== expectedState) {
+    throw new HttpsError("permission-denied", "State mismatch. Possible CSRF attack.");
   }
-  const { redirectUri } = parsedState;
 
-  if (!redirectUri) {
-    throw new HttpsError("invalid-argument", "State is missing redirectUri.");
+  // Validate redirect URI
+  const allowedRedirectUris = [
+    "https://linklearn-ai.firebaseapp.com/__/auth/handler",
+    "https://linklearn.ai/__/auth/handler", 
+    "https://www.linklearn.ai/__/auth/handler",
+    "http://localhost:5173/settings",
+    "https://www.linklearn.ai/settings",
+    "https://linklearn.ai/settings",
+    "http://localhost:5173/login",
+    "https://www.linklearn.ai/login",
+    "https://linklearn.ai/login",
+    "http://localhost:5173/onboarding",
+    "https://www.linklearn.ai/onboarding",
+    "https://linklearn.ai/onboarding",
+  ];
+  
+  if (!allowedRedirectUris.includes(redirectUri)) {
+    throw new HttpsError("invalid-argument", `Invalid redirect URI: ${redirectUri}`);
   }
 
   const oAuth2Client = new google.auth.OAuth2(
@@ -677,17 +709,35 @@ export const googleOAuthCallback = onCall(async (request) => {
     redirectUri
   );
 
-  // One update for all Google services
-  const updateData = {
-    googleTokens: {},
-    googleDriveConnected: true,
-    googleCalendarConnected: true,
-  };
+  // This will be replaced by the actual updateData below
 
   try {
     const { tokens } = await oAuth2Client.getToken(code);
     oAuth2Client.setCredentials(tokens);
-    (updateData as any).googleTokens = tokens;
+    
+    // Get token info to validate scopes (as per Google's recommendation)
+    const tokenInfo = await oAuth2Client.getTokenInfo(tokens.access_token!);
+    const grantedScopes = tokenInfo.scopes || [];
+    
+    // Check which Google services were actually granted
+    const driveConnected = grantedScopes.some(scope => 
+      scope.includes('drive') || scope.includes('googleapis.com/auth/drive')
+    );
+    const calendarConnected = grantedScopes.some(scope => 
+      scope.includes('calendar') || scope.includes('googleapis.com/auth/calendar')
+    );
+    const gmailConnected = grantedScopes.some(scope => 
+      scope.includes('gmail') || scope.includes('googleapis.com/auth/gmail')
+    );
+    
+    const updateData = {
+      googleTokens: tokens,
+      googleDriveConnected: driveConnected,
+      googleCalendarConnected: calendarConnected,
+      googleGmailConnected: gmailConnected,
+      grantedScopes: grantedScopes,
+      lastOAuthUpdate: admin.firestore.FieldValue.serverTimestamp(),
+    };
 
     try {
       await admin.firestore().collection("users").doc(uid).update(updateData);
@@ -699,10 +749,64 @@ export const googleOAuthCallback = onCall(async (request) => {
       }
     }
 
-    return { success: true, message: "Successfully connected to Google." };
+    return { 
+      success: true, 
+      message: "Successfully connected to Google.",
+      grantedScopes: grantedScopes,
+      services: {
+        drive: driveConnected,
+        calendar: calendarConnected,
+        gmail: gmailConnected
+      }
+    };
   } catch (error: any) {
     console.error("[Google Callback] FAILED:", error.response?.data || error.message);
     throw new HttpsError("internal", "Failed to retrieve access tokens from Google.");
+  }
+});
+
+// Store Google tokens from Firebase Auth OAuth
+export const storeGoogleTokens = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Authentication required.");
+  }
+
+  const { accessToken, idToken } = request.data;
+  const uid = request.auth.uid;
+
+  if (!accessToken) {
+    throw new HttpsError("invalid-argument", "Access token is required.");
+  }
+
+  try {
+    // Store the tokens and mark services as connected
+    const updateData = {
+      googleTokens: {
+        access_token: accessToken,
+        id_token: idToken,
+        token_type: 'Bearer',
+        expires_in: 3600, // Default 1 hour
+      },
+      googleDriveConnected: true,
+      googleCalendarConnected: true,
+      googleGmailConnected: true,
+      lastOAuthUpdate: admin.firestore.FieldValue.serverTimestamp(),
+    };
+
+    await admin.firestore().collection("users").doc(uid).update(updateData);
+    
+    return { 
+      success: true, 
+      message: "Successfully connected Google Workspace services.",
+      services: {
+        drive: true,
+        calendar: true,
+        gmail: true
+      }
+    };
+  } catch (error: any) {
+    console.error("Error storing Google tokens:", error);
+    throw new HttpsError("internal", "Failed to store Google tokens.");
   }
 });
 
@@ -858,13 +962,13 @@ export const createStripeCheckoutSession = onCall(async (request) => {
   }
 });
 
-// ---------- TASKMASTER LIVE API ENDPOINTS ----------
+// ---------- LINKLEARN LIVE API ENDPOINTS ----------
 
 /**
- * Creates an ephemeral token for secure client-side TaskMaster Live API access
+ * Creates an ephemeral token for secure client-side LinkLearn Live API access
  * Enhanced for Live API with custom system instructions and session config
  */
-export const createTaskMasterEphemeralToken = onCall(async (request) => {
+export const createLinkLearnEphemeralToken = onCall(async (request) => {
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "Authentication is required.");
   }
@@ -905,7 +1009,7 @@ export const createTaskMasterEphemeralToken = onCall(async (request) => {
     throw new HttpsError("resource-exhausted", `Rate limit exceeded. You can request ${limit} tokens per minute.`);
   }
 
-  const key = (userTier === "pro" || userTier === "premium") ? taskMasterApiKeyPaid.value() : taskMasterApiKeyFree.value();
+  const key = (userTier === "pro" || userTier === "premium") ? linkLearnApiKeyPaid.value() : linkLearnApiKeyFree.value();
   if (!key) {
     throw new HttpsError("internal", "Server configuration error: API key is missing.");
   }
@@ -949,10 +1053,10 @@ export const createTaskMasterEphemeralToken = onCall(async (request) => {
 });
 
 /**
- * Creates a TaskMaster Live API ephemeral token specifically for voice/video chat
+ * Creates a LinkLearn Live API ephemeral token specifically for voice/video chat
  * with custom system instructions and session configuration
  */
-export const createTaskMasterLiveToken = onCall(async (request) => {
+export const createLinkLearnLiveToken = onCall(async (request) => {
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "Authentication is required.");
   }
@@ -995,7 +1099,7 @@ export const createTaskMasterLiveToken = onCall(async (request) => {
   }
 
   // Select appropriate API key based on user tier
-  const key = (userTier === "pro" || userTier === "premium") ? taskMasterApiKeyPaid.value() : taskMasterApiKeyFree.value();
+  const key = (userTier === "pro" || userTier === "premium") ? linkLearnApiKeyPaid.value() : linkLearnApiKeyFree.value();
   if (!key) {
     throw new HttpsError("internal", "Server configuration error: API key is missing.");
   }
@@ -1023,9 +1127,9 @@ export const createTaskMasterLiveToken = onCall(async (request) => {
     }
   }
 
-  // Default system instruction for TaskMaster AI - use provided instruction or fallback
+  // Default system instruction for Link AI - use provided instruction or fallback
   const defaultSystemInstruction = systemInstruction || 
-    "You are TaskMaster AI, a helpful study assistant with voice capabilities. " +
+    "You are Link, a helpful study assistant with voice capabilities. " +
     "Speak in a friendly, conversational tone. Keep responses concise but informative. " +
     "You can help with studying, note-taking, research, and productivity tasks.";
 
@@ -1048,15 +1152,15 @@ export const createTaskMasterLiveToken = onCall(async (request) => {
       systemInstruction: defaultSystemInstruction,
     };
   } catch (error: any) {
-    console.error("Error creating TaskMaster Live token:", error);
-    throw new HttpsError("internal", sanitizeErrorMessage(error) || "Failed to create TaskMaster Live token");
+    console.error("Error creating LinkLearn Live token:", error);
+    throw new HttpsError("internal", sanitizeErrorMessage(error) || "Failed to create LinkLearn Live token");
   }
 });
 
 /**
  * Server-side Live API session proxy for enhanced security
  */
-export const taskMasterLiveProxy = onCall(async (request) => {
+export const linkLearnLiveProxy = onCall(async (request) => {
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "Authentication is required.");
   }
@@ -1098,7 +1202,7 @@ export const taskMasterLiveProxy = onCall(async (request) => {
     throw new HttpsError("resource-exhausted", `Rate limit exceeded. You can start ${limit} voice sessions per minute.`);
   }
 
-  const key = (userTier === "pro" || userTier === "premium") ? taskMasterApiKeyPaid.value() : taskMasterApiKeyFree.value();
+  const key = (userTier === "pro" || userTier === "premium") ? linkLearnApiKeyPaid.value() : linkLearnApiKeyFree.value();
   if (!key) {
     throw new HttpsError("internal", "Server configuration error: API key is missing.");
   }
@@ -1115,7 +1219,7 @@ export const taskMasterLiveProxy = onCall(async (request) => {
         }
       }
     },
-    system_instruction: "You are a helpful AI assistant named TaskMaster with voice capabilities. Respond naturally and conversationally.",
+    system_instruction: "You are a helpful AI assistant named Link with voice capabilities. Respond naturally and conversationally.",
     ...sessionConfig
   };
 
@@ -1150,8 +1254,8 @@ export const createStripePortalSession = onCall(async (request) => {
   }
   const stripe = new Stripe(key, { apiVersion: "2024-04-10", typescript: true });
   try {
-    const isProduction = process.env.GCLOUD_PROJECT === "deepworkai-c3419";
-    const returnUrl = isProduction ? "https://www.taskmaster.one/settings" : "http://localhost:5173/settings";
+    const isProduction = process.env.GCLOUD_PROJECT === "linklearn-ai";
+    const returnUrl = isProduction ? "https://www.linklearn.ai/settings" : "http://localhost:5173/settings";
     const portalSession = await stripe.billingPortal.sessions.create({ customer: stripeCustomerId, return_url: returnUrl });
     return { portalUrl: portalSession.url };
   } catch (error: unknown) {
@@ -3586,7 +3690,7 @@ export const searchYouTubeVideos = functionsV1.https.onCall(async (data, context
     const searchResponse = await fetch(`${searchUrl}?${searchParams}`, {
       headers: {
         'Accept-Encoding': 'gzip',
-        'User-Agent': 'TaskMaster-YouTube-API/1.0 (gzip)'
+        'User-Agent': 'LinkLearn-YouTube-API/1.0 (gzip)'
       }
     });
     
@@ -3618,7 +3722,7 @@ export const searchYouTubeVideos = functionsV1.https.onCall(async (data, context
     const videosResponse = await fetch(`${videosUrl}?${videosParams}`, {
       headers: {
         'Accept-Encoding': 'gzip',
-        'User-Agent': 'TaskMaster-YouTube-API/1.0 (gzip)'
+        'User-Agent': 'LinkLearn-YouTube-API/1.0 (gzip)'
       }
     });
     const videosData = await videosResponse.json();
@@ -3817,6 +3921,27 @@ export const getTrendingYouTubeVideos = functionsV1.https.onCall(async (data, co
 });
 
 /**
+ * Helper function to parse SRT content and extract clean text
+ */
+function parseSrtContent(srtContent: string): string {
+  return srtContent
+    // Remove timing lines (00:00:00,000 --> 00:00:05,000)
+    .replace(/\d{2}:\d{2}:\d{2},\d{3} --> \d{2}:\d{2}:\d{2},\d{3}/g, '')
+    // Remove sequence numbers
+    .replace(/^\d+$/gm, '')
+    // Remove HTML tags
+    .replace(/<[^>]*>/g, ' ')
+    // Clean up multiple whitespace and newlines
+    .replace(/\n\s*\n/g, '\n')
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line && !line.match(/^\d+$/))
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
  * Process YouTube video - Extract transcript and generate notes
  */
 export const processYouTubeVideo = functionsV1.https.onCall(async (data, context) => {
@@ -3862,14 +3987,60 @@ export const processYouTubeVideo = functionsV1.https.onCall(async (data, context
     const channelTitle = video.snippet.channelTitle;
     const duration = video.contentDetails.duration;
     
-    // Try to get transcript using youtube-transcript library or similar approach
-    // For now, we'll use a placeholder since transcript extraction requires additional setup
+    // Extract transcript using YouTube Captions API
     let transcript = '';
     
     try {
-      // This would need to be implemented with a proper transcript extraction service
-      // For now, we'll use the video description as fallback content
-      transcript = description || `Video: ${title} by ${channelTitle}`;
+      // Get captions list for the video
+      const captionsUrl = `https://www.googleapis.com/youtube/v3/captions`;
+      const captionsParams = new URLSearchParams({
+        key: apiKey,
+        part: 'snippet',
+        videoId: videoId
+      });
+
+      const captionsResponse = await fetch(`${captionsUrl}?${captionsParams}`);
+      
+      if (captionsResponse.ok) {
+        const captionsData = await captionsResponse.json();
+        
+        if (captionsData.items && captionsData.items.length > 0) {
+          // Find English captions first, or fallback to first available
+          const englishCaption = captionsData.items.find((item: any) => 
+            item.snippet.language.startsWith('en') || item.snippet.language === 'en'
+          );
+          const captionTrack = englishCaption || captionsData.items[0];
+          
+          if (captionTrack) {
+            // Download the caption track
+            const downloadUrl = `https://www.googleapis.com/youtube/v3/captions/${captionTrack.id}`;
+            const downloadParams = new URLSearchParams({
+              key: apiKey,
+              tfmt: 'srt' // Get SRT format
+            });
+            
+            const transcriptResponse = await fetch(`${downloadUrl}?${downloadParams}`);
+            
+            if (transcriptResponse.ok) {
+              const srtContent = await transcriptResponse.text();
+              
+              // Parse SRT content to extract just the text
+              transcript = parseSrtContent(srtContent);
+              console.log(`Successfully extracted transcript: ${transcript.length} characters`);
+            } else {
+              console.warn('Failed to download transcript, using description');
+              transcript = description || '';
+            }
+          }
+        }
+      }
+      
+      // Fallback to description if no transcript found
+      if (!transcript || transcript.trim().length < 100) {
+        console.warn('No transcript available or too short, using description as fallback');
+        transcript = description || `Video: ${title} by ${channelTitle}`;
+      }
+      
     } catch (transcriptError) {
       console.warn("Transcript extraction failed, using description:", transcriptError);
       transcript = description || `Video: ${title} by ${channelTitle}`;
@@ -3880,250 +4051,19 @@ export const processYouTubeVideo = functionsV1.https.onCall(async (data, context
         "Unable to extract sufficient content from video. The video may not have captions or sufficient description.");
     }
 
-    // Generate AI content using the same approach as other processors
-    const uid = context.auth?.uid;
-    if (!uid) {
-      throw new functionsV1.https.HttpsError("unauthenticated", "User ID is required.");
-    }
+    // Backend only extracts transcript, frontend handles AI processing
     
-    // Get appropriate API key based on user tier
-    const userDoc = await admin.firestore().collection('users').doc(uid).get();
-    const userData = userDoc.data();
-    const userTier = userData?.activeTier || 'basic';
-    
-    const geminiApiKey = userTier === 'basic' 
-      ? taskMasterApiKeyFree.value() 
-      : taskMasterApiKeyPaid.value();
-    
-    // Create AI prompts for processing
-    const titlePrompt = `Generate a clear, descriptive title for study notes based on this YouTube video content. Title should be academic and specific.
-
-Video Title: ${title}
-Content: ${transcript.substring(0, 1000)}...
-
-Respond with ONLY the title, no quotes or extra text.`;
-
-    const contentPrompt = `Convert this YouTube video content into comprehensive study notes in HTML format. Focus on key concepts, important details, and learning objectives.
-
-Video: ${title} by ${channelTitle}
-Content: ${transcript}
-
-Create well-structured notes with:
-- Clear headings and subheadings
-- Key concepts highlighted
-- Important details organized logically
-- Learning objectives if applicable
-
-Format as clean HTML with proper structure.`;
-
-    const keyPointsPrompt = `Extract the key learning points from this YouTube video content. List the most important concepts, facts, and takeaways.
-
-Video: ${title}
-Content: ${transcript}
-
-Your Response (Must be only a list of points starting with '* '):
-* `;
-
-    const flashcardsPrompt = `You are CardCrafter, an expert system for creating 15-25 high-quality study flashcards from YouTube video content.
-
-MANDATORY FORMATTING (NO DEVIATIONS):
-1. BLOCK SEPARATOR: Each flashcard block MUST be separated by a single line with exactly: \`---FLASHCARD_DIVIDER---\`
-2. FLASHCARD FORMAT: Every block must use this exact multi-line structure:
-   Front: [Text for the front of the card]
-   Back: [Text for the back of the card]
-3. NO EXTRA TEXT: Your response must begin directly with "Front:".
-
-Video: ${title}
-Content: ${transcript}
-
-Create flashcards covering the main concepts, definitions, and important details from the video.`;
-
-    const questionsPrompt = `Create 8-12 multiple choice questions to test understanding of this YouTube video content.
-
-Video: ${title}
-Content: ${transcript}
-
-Format each question as:
-Question: [Question text]
-A) [Option A]
-B) [Option B] 
-C) [Option C]
-D) [Option D]
-Correct: [A, B, C, or D]
-Explanation: [Brief explanation]
-
-Topic: [Topic name]
----QUESTION_DIVIDER---`;
-
-    // Make parallel AI calls
-    const aiCalls = [
-      { prompt: titlePrompt, type: 'title' },
-      { prompt: contentPrompt, type: 'content' },
-      { prompt: keyPointsPrompt, type: 'keyPoints' },
-      { prompt: flashcardsPrompt, type: 'flashcards' },
-      { prompt: questionsPrompt, type: 'questions' }
-    ];
-
-    const aiResults: Record<string, string> = {};
-    
-    // Process AI calls in parallel
-    const promises = aiCalls.map(async (call) => {
-      try {
-        const taskMasterApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`;
-        
-        const requestBody = {
-          contents: [{ parts: [{ text: call.prompt }] }],
-          generationConfig: {
-            temperature: call.type === 'title' ? 0.3 : call.type === 'content' ? 0.6 : 0.5,
-            maxOutputTokens: call.type === 'content' ? 16384 : call.type === 'flashcards' ? 16384 : 8192
-          }
-        };
-
-        const response = await fetch(taskMasterApiUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'User-Agent': `TaskMaster-YouTube-Backend/1.0 (uid:${uid.substring(0,8)})`
-          },
-          body: JSON.stringify(requestBody)
-        });
-
-        if (!response.ok) {
-          throw new Error(`AI API error: ${response.statusText}`);
-        }
-
-        const result = await response.json();
-        
-        // Extract text from response
-        let text = '';
-        if (result.candidates?.[0]?.content?.parts?.[0]?.text) {
-          text = result.candidates[0].content.parts[0].text;
-        } else if (result.candidates?.[0]?.finishReason === "MAX_TOKENS") {
-          text = "Error: Response was truncated due to length limits. Please try with shorter content.";
-        } else {
-          text = "Error: No text found in AI response.";
-        }
-
-        return { type: call.type, result: text };
-      } catch (error) {
-        console.error(`AI call failed for ${call.type}:`, error);
-        return { 
-          type: call.type, 
-          result: call.type === 'title' ? 'YouTube Video Notes' : 
-                 call.type === 'content' ? '<p>Content generation failed. Please try again.</p>' :
-                 call.type === 'keyPoints' ? '* Content processing failed\n* Please try again' :
-                 call.type === 'flashcards' ? 'Front: Content processing failed\nBack: Please try again' :
-                 'Question: Content processing failed\nA) Try again\nB) Contact support\nC) Check connection\nD) Verify account\nCorrect: A\nExplanation: Please try processing again.'
-        };
-      }
-    });
-
-    const results = await Promise.all(promises);
-    results.forEach(({ type, result }) => {
-      aiResults[type] = result;
-    });
-
-    // Process results
-    const processedTitle = aiResults.title.replace(/["']/g, "").trim() || title;
-    const processedContent = aiResults.content.startsWith("Error:") ? 
-      `<p><strong>Error generating note:</strong> ${aiResults.content}</p>` : 
-      aiResults.content;
-
-    // Parse flashcards
-    const flashcards: { front: string; back: string }[] = [];
-    if (!aiResults.flashcards.startsWith("Error:")) {
-      const flashcardBlocks = aiResults.flashcards.split('---FLASHCARD_DIVIDER---');
-      for (const block of flashcardBlocks) {
-        const lines = block.trim().split('\n');
-        let front = '';
-        let back = '';
-        let currentSection = '';
-        
-        for (const line of lines) {
-          if (line.startsWith('Front:')) {
-            currentSection = 'front';
-            front = line.replace('Front:', '').trim();
-          } else if (line.startsWith('Back:')) {
-            currentSection = 'back';
-            back = line.replace('Back:', '').trim();
-          } else if (line.trim() && currentSection) {
-            if (currentSection === 'front') front += ' ' + line.trim();
-            if (currentSection === 'back') back += ' ' + line.trim();
-          }
-        }
-        
-        if (front && back) {
-          flashcards.push({ front: front.trim(), back: back.trim() });
-        }
-      }
-    }
-
-    // Parse questions
-    const questions: any[] = [];
-    if (!aiResults.questions.startsWith("Error:")) {
-      const questionBlocks = aiResults.questions.split('---QUESTION_DIVIDER---');
-      for (const block of questionBlocks) {
-        const lines = block.trim().split('\n');
-        let question = '';
-        const options: string[] = [];
-        let correctAnswer = 0;
-        let explanation = '';
-        let topic = '';
-        
-        for (const line of lines) {
-          if (line.startsWith('Question:')) {
-            question = line.replace('Question:', '').trim();
-          } else if (line.match(/^[A-D]\)/)) {
-            options.push(line.substring(2).trim());
-          } else if (line.startsWith('Correct:')) {
-            const correctLetter = line.replace('Correct:', '').trim();
-            correctAnswer = ['A', 'B', 'C', 'D'].indexOf(correctLetter);
-          } else if (line.startsWith('Explanation:')) {
-            explanation = line.replace('Explanation:', '').trim();
-          } else if (line.startsWith('Topic:')) {
-            topic = line.replace('Topic:', '').trim();
-          }
-        }
-        
-        if (question && options.length === 4) {
-          questions.push({
-            id: `q_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            question,
-            options,
-            correctAnswer,
-            explanation,
-            topic: topic || 'General',
-            hint: ''
-          });
-        }
-      }
-    }
-
-    // Parse key points
-    const keyPoints = aiResults.keyPoints.startsWith("Error:") ? 
-      ['Content processing failed', 'Please try again'] :
-      aiResults.keyPoints.split('\n')
-        .filter(line => line.trim().startsWith('*'))
-        .map(line => line.replace(/^\*\s*/, '').trim())
-        .filter(point => point.length > 0);
-
+    // Return the transcript data for frontend processing
     return {
       success: true,
       data: {
-        title: processedTitle,
-        content: processedContent,
-        keyPoints,
-        flashcards,
-        questions,
-        topics: questions.length > 0 ? [{ id: 'general', name: 'General', description: 'General topics from the video' }] : [],
-        sourceUrl: `https://www.youtube.com/watch?v=${videoId}`,
-        videoMetadata: {
-          title,
-          channelTitle,
-          description,
-          duration,
-          videoId
-        }
+        title,
+        transcript,
+        description,
+        channelTitle,
+        duration,
+        videoId,
+        sourceUrl: `https://www.youtube.com/watch?v=${videoId}`
       }
     };
 

@@ -3,7 +3,7 @@
 # Security update deployment script
 # Only deploys the updated functions to avoid quota issues
 
-echo "🔒 Deploying TaskMaster security updates..."
+echo "🔒 Deploying LinkLearn security updates..."
 echo "⚠️  This will deploy enhanced security measures for Gemini API usage"
 
 # Confirm deployment
@@ -28,7 +28,7 @@ fi
 echo "📦 Deploying only the updated functions..."
 
 # Deploy only the core proxy functions (not all functions to avoid quota)
-firebase deploy --only functions:taskMasterProxy,functions:emergencyDisableReasoning,functions:taskMasterLiveProxy --project deepworkai-c3419
+firebase deploy --only functions:linkLearnProxy,functions:emergencyDisableReasoning,functions:linkLearnLiveProxy --project linklearn-ai
 
 if [ $? -eq 0 ]; then
     echo "✅ Security updates deployed successfully!"
@@ -40,7 +40,7 @@ if [ $? -eq 0 ]; then
     echo "   • Detailed request metadata logging"
     echo ""
     echo "🔍 Monitor logs with:"
-    echo "   firebase functions:log --project deepworkai-c3419"
+    echo "   firebase functions:log --project linklearn-ai"
     echo ""
     echo "🚨 Emergency disable reasoning (admin only):"
     echo "   Call 'emergencyDisableReasoning' function from console"

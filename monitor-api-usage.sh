@@ -3,7 +3,7 @@
 # API Usage Monitoring Script
 # Helps track Gemini API usage and detect suspicious patterns
 
-echo "📊 TaskMaster API Usage Monitor"
+echo "📊 LinkLearn API Usage Monitor"
 echo "==============================="
 
 # Function to get logs from Firebase
@@ -11,7 +11,7 @@ get_logs() {
     local hours=${1:-1}
     echo "📋 Fetching logs from last $hours hour(s)..."
     
-    firebase functions:log --project deepworkai-c3419 | \
+    firebase functions:log --project linklearn-ai | \
     head -1000 | \
     grep -E "(API REQUEST|REASONING MODEL USAGE|SECURITY ALERT|USAGE ALERT)" | \
     tail -100
@@ -24,7 +24,7 @@ analyze_usage() {
     echo ""
     
     # Get logs and analyze
-    firebase functions:log --project deepworkai-c3419 | \
+    firebase functions:log --project linklearn-ai | \
     head -1000 | \
     grep "API REQUEST" | \
     jq -r '.model' 2>/dev/null | \
@@ -32,7 +32,7 @@ analyze_usage() {
     
     echo ""
     echo "🧠 Reasoning model usage:"
-    firebase functions:log --project deepworkai-c3419 | \
+    firebase functions:log --project linklearn-ai | \
     head -500 | \
     grep "REASONING MODEL USAGE" | \
     tail -10
@@ -43,7 +43,7 @@ check_security() {
     echo ""
     echo "🚨 Security Alerts (last 24 hours):"
     
-    firebase functions:log --project deepworkai-c3419 | \
+    firebase functions:log --project linklearn-ai | \
     head -2000 | \
     grep -E "(SECURITY ALERT|USAGE ALERT)" | \
     tail -20
