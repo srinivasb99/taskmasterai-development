@@ -1,0 +1,71 @@
+rules_version = '2';
+
+// Firebase Storage Security Rules for LinkLearn AI
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Allow authenticated users to read and write their own files
+    // Path structure: pdfs/{userId}/{filename}
+    match /pdfs/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Allow authenticated users to read and write their own profile images
+    // Path structure: profile-images/{userId}/{filename}
+    match /profile-images/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Allow authenticated users to read and write their own audio files
+    // Path structure: audio/{userId}/{filename}
+    match /audio/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Allow authenticated users to read and write their own documents
+    // Path structure: documents/{userId}/{filename}
+    match /documents/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Allow authenticated users to read and write their own uploads
+    // Path structure: uploads/{userId}/{filename}
+    match /uploads/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Allow authenticated users to read and write their own files
+    // Path structure: files/{userId}/{filename}
+    match /files/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Allow authenticated users to read and write their own chat images
+    // Path structure: chatImages/{userId}/{conversationId}/{filename}
+    match /chatImages/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Allow authenticated users to read and write their own note images
+    // Path structure: note-images/{userId}/{noteId}/{filename}
+    match /note-images/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Allow authenticated users to read and write their own user files
+    // Path structure: users/{userId}/{allPaths}
+    match /users/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Allow authenticated users to read and write their own profile pictures
+    // Path structure: profile_pictures/{userId}.{extension}
+    match /profile_pictures/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == resource.name.split('.')[0];
+    }
+    
+    // Deny access to all other paths
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
