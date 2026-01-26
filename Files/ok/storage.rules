@@ -27,6 +27,12 @@ service firebase.storage {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
     
+    // Allow authenticated users to read and write their own converted PDFs
+    // Path structure: converted-pdfs/{userId}/{filename}
+    match /converted-pdfs/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
     // Allow authenticated users to read and write their own uploads
     // Path structure: uploads/{userId}/{filename}
     match /uploads/{userId}/{allPaths=**} {
@@ -58,9 +64,17 @@ service firebase.storage {
     }
     
     // Allow authenticated users to read and write their own profile pictures
-    // Path structure: profile_pictures/{userId}.{extension}
-    match /profile_pictures/{allPaths=**} {
-      allow read, write: if request.auth != null && request.auth.uid == resource.name.split('.')[0];
+    // Path structure: profile_pictures/{userId}/profile.{extension}
+    match /profile_pictures/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Allow public read access for generated videos (made public via makePublic())
+    // Allow authenticated users to write their own videos
+    // Path structure: videos/{userId}/{filename}
+    match /videos/{userId}/{allPaths=**} {
+      allow read: if true; // Public read access for generated videos
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
     
     // Deny access to all other paths
