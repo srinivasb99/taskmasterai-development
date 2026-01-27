@@ -25,15 +25,15 @@ jobs:
 
       - name: Install linklearn-ai dependencies
         working-directory: ./linklearn-ai
-        run: npm ci
+        run: npm ci --prefer-offline --no-audit --progress=false
+
+      - name: Install functions dependencies
+        working-directory: ./functions
+        run: npm ci --prefer-offline --no-audit --progress=false
 
       - name: Build linklearn-ai
         working-directory: ./linklearn-ai
         run: npm run build
-
-      - name: Install functions dependencies
-        working-directory: ./functions
-        run: npm ci
 
       - name: Build functions
         working-directory: ./functions
